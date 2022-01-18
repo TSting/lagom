@@ -17,7 +17,7 @@
         </requiredProperty>
         <!-- These properties must be valid Velocity identifiers, so cannot contain dots. -->
         <requiredProperty key="scala-binary-version">
-            <defaultValue>2.12</defaultValue>
+            <defaultValue>2.13</defaultValue>
             <validationRegex>\d+\.\d+</validationRegex>
         </requiredProperty>
     </requiredProperties>

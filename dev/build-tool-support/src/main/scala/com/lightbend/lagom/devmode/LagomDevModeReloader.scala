@@ -6,7 +6,7 @@ package com.lightbend.lagom.devmode
 
 import java.io.Closeable
 import java.io.File
-import java.net.URL
+import java.net.{URL, URLClassLoader}
 import java.security.AccessController
 import java.security.PrivilegedAction
 import java.time.Instant
@@ -14,7 +14,6 @@ import java.util
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.atomic.AtomicReference
-
 import play.api.PlayException
 import play.core.Build
 import play.core.BuildLink
@@ -24,7 +23,7 @@ import play.dev.filewatch.SourceModificationWatch
 import play.dev.filewatch.WatchState
 
 import scala.collection.JavaConverters._
-import better.files.{ File => _, _ }
+import better.files.{File => _, _}
 
 object Reloader {
   sealed trait CompileResult
@@ -130,9 +129,24 @@ object Reloader {
      * buildLoader. Also accesses the reloader resources to make these available
      * to the applicationLoader, creating a full circle for resource loading.
      */
-    lazy val delegatingLoader: ClassLoader = buildDelegating(parentClassLoader, reloader.getClassLoader _)
+    val buildLoader = this.getClass.getClassLoader
 
-    lazy val applicationLoader = buildForApplication(dependencyClasspath, delegatingLoader)
+    /**
+     * ClassLoader that delegates loading of shared build link classes to the
+     * buildLoader. Also accesses the reloader resources to make these available
+     * to the applicationLoader, creating a full circle for resource loading.
+     */
+    lazy val delegatingLoader: ClassLoader = new DelegatingClassLoader(
+      parentClassLoader,
+      Build.sharedClasses,
+      buildLoader,
+      new ApplicationClassLoaderProvider {
+        def get: URLClassLoader = { reloader.getClassLoader.orNull }
+      }
+    )
+
+    lazy val applicationLoader =
+      new NamedURLClassLoader("DependencyClassLoader", urls(dependencyClasspath), delegatingLoader)
     lazy val decoratedLoader   = classLoaderDecorator(applicationLoader)
 
     lazy val reloader = new Reloader(
@@ -173,7 +187,17 @@ object Reloader {
       httpPort: Int,
       httpsPort: Int
   ): DevServer = {
-    lazy val delegatingLoader: ClassLoader = buildDelegating(parentClassLoader, () => Some(applicationLoader))
+    val buildLoader = this.getClass.getClassLoader
+
+    lazy val delegatingLoader: ClassLoader = new DelegatingClassLoader(
+      parentClassLoader,
+      Build.sharedClasses,
+      buildLoader,
+      new ApplicationClassLoaderProvider {
+        def get: URLClassLoader = { applicationLoader }
+      }
+    )
+
     lazy val applicationLoader             = buildForApplication(dependencyClasspath, delegatingLoader)
 
     val _buildLink = new BuildLink {
@@ -212,14 +236,22 @@ object Reloader {
 
   private def buildDelegating(
       parentClassLoader: ClassLoader,
-      applicationClassLoader: () => Option[ClassLoader]
+      reloader: Reloader
   ): ClassLoader = {
     val buildLoader   = this.getClass.getClassLoader
-    val sharedClasses = Build.sharedClasses.asScala.toSet
-    new DelegatingClassLoader(parentClassLoader, sharedClasses, buildLoader, applicationClassLoader)
+    val sharedClasses = Build.sharedClasses
+
+    new DelegatingClassLoader(
+      parentClassLoader,
+      sharedClasses,
+      buildLoader,
+      new ApplicationClassLoaderProvider {
+        def get: URLClassLoader = { reloader.getClassLoader.orNull }
+      }
+    )
   }
 
-  private def buildForApplication(dependencyClasspath: Seq[File], delegatingLoader: => ClassLoader): ClassLoader =
+  private def buildForApplication(dependencyClasspath: Seq[File], delegatingLoader: => ClassLoader): NamedURLClassLoader =
     new NamedURLClassLoader("LagomDependencyClassLoader", urls(dependencyClasspath), delegatingLoader)
 
   private def mainDev(
@@ -252,7 +284,7 @@ import Reloader._
 
 class Reloader(
     reloadCompile: () => CompileResult,
-    baseLoader: ClassLoader,
+    val baseLoader: ClassLoader,
     val projectPath: File,
     devSettings: Seq[(String, String)],
     monitoredFiles: Seq[File],
@@ -260,7 +292,7 @@ class Reloader(
     reloadLock: AnyRef
 ) extends BuildLink {
   // The current classloader for the application
-  @volatile private var currentApplicationClassLoader: Option[ClassLoader] = None
+  @volatile private var currentApplicationClassLoader: Option[URLClassLoader] = None
   // Flag to force a reload on the next request.
   // This is set if a compile error occurs, and also by the forceReload method on BuildLink, which is called for
   // example when evolutions have been applied.
@@ -402,5 +434,5 @@ class Reloader(
     quietTimeTimer.cancel()
   }
 
-  def getClassLoader: Option[ClassLoader] = currentApplicationClassLoader
+  def getClassLoader = currentApplicationClassLoader
 }

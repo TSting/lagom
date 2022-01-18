@@ -1,16 +1,21 @@
 import java.net.InetSocketAddress
 import java.nio.channels.ServerSocketChannel
-
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
 import com.typesafe.tools.mima.core._
 import lagom.Protobuf
+import lagom.build.Dependencies.Versions
 import lagom.build._
 import org.scalafmt.sbt.ScalafmtPlugin
+import sbt.Keys.dependencyOverrides
 
 // Turn off "Resolving" log messages that clutter build logs
 (ThisBuild / ivyLoggingLevel) := UpdateLogging.Quiet
+
+resolvers += "kriskras-public-repo" at "https://raw.github.com/Kris-Kras/public-dependencies/master"
+
+(ThisBuild / resolvers) += "kriskras-public-repo" at "https://raw.github.com/Kris-Kras/public-dependencies/master"
 
 def evictionSettings: Seq[Setting[_]] = Seq(
   // This avoids a lot of dependency resolution warnings to be showed.
@@ -68,7 +73,7 @@ def common: Seq[Setting[_]] = releaseSettings ++ evictionSettings ++ Seq(
     "-parameters",
     "-Xlint:unchecked",
     "-Xlint:deprecation"
-  ) ++ akka.JavaVersion.sourceAndTarget(akka.CrossJava.Keys.fullJavaHomes.value("8")),
+  ) ++ akka.JavaVersion.sourceAndTarget(new File("/opt/homebrew/Cellar/openjdk/17.0.1/libexec/openjdk.jdk/Contents/Home")),
   LagomPublish.validatePublishSettingsSetting
 )
 
@@ -136,7 +141,7 @@ def publishMavenStyleSettings: Seq[Setting[_]] = Seq(
 )
 
 def sonatypeSettings: Seq[Setting[_]] = Seq(
-  publishTo := sonatypePublishToBundle.value,
+  publishTo := Some(Resolver.file("file", new File("/Users/gideondk/Development/kriskras-mvn-repo"))),
 )
 
 def runtimeScalaSettings: Seq[Setting[_]] = Seq(
@@ -146,7 +151,6 @@ def runtimeScalaSettings: Seq[Setting[_]] = Seq(
   (Compile / scalacOptions) ++= Seq(
     "-encoding",
     "UTF-8",
-    "-target:jvm-1.8",
     "-feature",
     "-unchecked",
     "-Xlog-reflective-calls",
@@ -160,6 +164,7 @@ def sbtScalaSettings: Seq[Setting[_]] = Seq(
 )
 
 def runtimeLibCommon: Seq[Setting[_]] = common ++ sonatypeSettings ++ runtimeScalaSettings ++ Seq(
+  dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0"),
   Dependencies.validateDependenciesSetting,
   Dependencies.allowedPruneSetting,
   Dependencies.allowDependenciesSetting,
@@ -508,7 +513,9 @@ lazy val spi = (project in file("spi"))
 
 lazy val jackson = (project in file("jackson"))
   .settings(name := "lagom-javadsl-jackson")
-  .settings(runtimeLibCommon, mimaSettings)
+  .settings(
+    runtimeLibCommon,
+    mimaSettings)
   .enablePlugins(RuntimeLibPlugins)
   .settings(Dependencies.jackson)
   .dependsOn(`api-javadsl`, immutables % "test->compile")
@@ -539,7 +546,8 @@ lazy val client = (project in file("service/core/client"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-client",
-    Dependencies.client
+    Dependencies.client,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(api, spi)
 
@@ -548,7 +556,8 @@ lazy val `client-javadsl` = (project in file("service/javadsl/client"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-client",
-    Dependencies.`client-javadsl`
+    Dependencies.`client-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(client, `api-javadsl`, jackson)
 
@@ -558,14 +567,16 @@ lazy val `client-scaladsl` = (project in file("service/scaladsl/client"))
   .settings(macroCompileSettings)
   .settings(
     name := "lagom-scaladsl-client",
-    Dependencies.`client-scaladsl`
+    Dependencies.`client-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(client, `api-scaladsl`, `macro-testkit` % Test)
 
 lazy val `integration-client-javadsl` = (project in file("service/javadsl/integration-client"))
   .settings(
     name := "lagom-javadsl-integration-client",
-    Dependencies.`integration-client-javadsl`
+    Dependencies.`integration-client-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .settings(runtimeLibCommon, mimaSettings)
   .enablePlugins(RuntimeLibPlugins)
@@ -574,7 +585,8 @@ lazy val `integration-client-javadsl` = (project in file("service/javadsl/integr
 lazy val server = (project in file("service/core/server"))
   .settings(
     name := "lagom-server",
-    Dependencies.server
+    Dependencies.server,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .enablePlugins(RuntimeLibPlugins)
   .settings(runtimeLibCommon, mimaSettings)
@@ -583,7 +595,8 @@ lazy val server = (project in file("service/core/server"))
 lazy val `server-javadsl` = (project in file("service/javadsl/server"))
   .settings(
     name := "lagom-javadsl-server",
-    Dependencies.`server-javadsl`
+    Dependencies.`server-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .enablePlugins(RuntimeLibPlugins)
   .settings(runtimeLibCommon, mimaSettings)
@@ -594,7 +607,8 @@ lazy val `server-javadsl` = (project in file("service/javadsl/server"))
 lazy val `server-scaladsl` = (project in file("service/scaladsl/server"))
   .settings(
     name := "lagom-scaladsl-server",
-    Dependencies.`server-scaladsl`
+    Dependencies.`server-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .enablePlugins(RuntimeLibPlugins)
   .settings(runtimeLibCommon, mimaSettings)
@@ -605,7 +619,8 @@ lazy val `testkit-core` = (project in file("testkit/core"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-core-testkit",
-    Dependencies.`testkit-core`
+    Dependencies.`testkit-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .settings(overridesScalaParserCombinators, forkedTests)
   .dependsOn(
@@ -619,7 +634,8 @@ lazy val `testkit-javadsl` = (project in file("testkit/javadsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-testkit",
-    Dependencies.`testkit-javadsl`
+    Dependencies.`testkit-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .settings(overridesScalaParserCombinators)
   .dependsOn(
@@ -640,7 +656,8 @@ lazy val `testkit-scaladsl` = (project in file("testkit/scaladsl"))
   .settings(overridesScalaParserCombinators)
   .settings(
     name := "lagom-scaladsl-testkit",
-    Dependencies.`testkit-scaladsl`
+    Dependencies.`testkit-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `testkit-core`,
@@ -660,6 +677,7 @@ lazy val `integration-tests-javadsl` = (project in file("service/javadsl/integra
   .settings(
     name := "lagom-javadsl-integration-tests",
     Dependencies.`integration-tests-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0"),
     PgpKeys.publishSigned := {},
     publish / skip := true
   )
@@ -678,6 +696,7 @@ lazy val `integration-tests-scaladsl` = (project in file("service/scaladsl/integ
   .settings(
     name := "lagom-scaladsl-integration-tests",
     Dependencies.`integration-tests-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0"),
     PgpKeys.publishSigned := {},
     publish / skip := true
   )
@@ -710,6 +729,7 @@ lazy val `akka-discovery-service-locator-core` = (project in file("akka-service-
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-akka-discovery-service-locator-core",
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0"),
     Dependencies.`lagom-akka-discovery-service-locator-core`
   )
 
@@ -719,7 +739,8 @@ lazy val `akka-discovery-service-locator-javadsl` = (project in file("akka-servi
   .settings(runtimeLibCommon, mimaSettings)
   .enablePlugins(RuntimeLibPlugins)
   .settings(
-    name := "lagom-javadsl-akka-discovery-service-locator"
+    name := "lagom-javadsl-akka-discovery-service-locator",
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `akka-discovery-service-locator-scaladsl` = (project in file("akka-service-locator/scaladsl"))
@@ -729,7 +750,8 @@ lazy val `akka-discovery-service-locator-scaladsl` = (project in file("akka-serv
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-scaladsl-akka-discovery-service-locator",
-    Dependencies.`lagom-akka-discovery-service-locator-scaladsl`
+    Dependencies.`lagom-akka-discovery-service-locator-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(`testkit-scaladsl` % Test)
 
@@ -738,7 +760,8 @@ lazy val `akka-management-core` = (project in file("akka-management/core"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-akka-management-core",
-    Dependencies.`akka-management-core`
+    Dependencies.`akka-management-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 lazy val `akka-management-javadsl` = (project in file("akka-management/javadsl"))
   .dependsOn(`akka-management-core`)
@@ -746,7 +769,8 @@ lazy val `akka-management-javadsl` = (project in file("akka-management/javadsl")
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-akka-management-javadsl",
-    Dependencies.`akka-management-javadsl`
+    Dependencies.`akka-management-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 lazy val `akka-management-scaladsl` = (project in file("akka-management/scaladsl"))
   .dependsOn(`akka-management-core`)
@@ -754,7 +778,8 @@ lazy val `akka-management-scaladsl` = (project in file("akka-management/scaladsl
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-akka-management-scaladsl",
-    Dependencies.`akka-management-scaladsl`
+    Dependencies.`akka-management-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `cluster-core` = (project in file("cluster/core"))
@@ -764,7 +789,8 @@ lazy val `cluster-core` = (project in file("cluster/core"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-cluster-core",
-    Dependencies.`cluster-core`
+    Dependencies.`cluster-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .configure(multiJvm)
 
@@ -774,7 +800,8 @@ lazy val `cluster-javadsl` = (project in file("cluster/javadsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-cluster",
-    Dependencies.`cluster-javadsl`
+    Dependencies.`cluster-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `cluster-scaladsl` = (project in file("cluster/scaladsl"))
@@ -783,7 +810,8 @@ lazy val `cluster-scaladsl` = (project in file("cluster/scaladsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-scaladsl-cluster",
-    Dependencies.`cluster-scaladsl`
+    Dependencies.`cluster-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `pubsub-javadsl` = (project in file("pubsub/javadsl"))
@@ -795,7 +823,8 @@ lazy val `pubsub-javadsl` = (project in file("pubsub/javadsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-pubsub",
-    Dependencies.`pubsub-javadsl`
+    Dependencies.`pubsub-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .configure(multiJvm)
 
@@ -808,7 +837,8 @@ lazy val `pubsub-scaladsl` = (project in file("pubsub/scaladsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-scaladsl-pubsub",
-    Dependencies.`pubsub-scaladsl`
+    Dependencies.`pubsub-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .configure(multiJvm)
 
@@ -821,7 +851,8 @@ lazy val `projection-core` = (project in file("projection/core"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-projection-core",
-    Dependencies.`projection-core`
+    Dependencies.`projection-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .configure(multiJvm)
 
@@ -831,7 +862,8 @@ lazy val `projection-scaladsl` = (project in file("projection/scaladsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-scaladsl-projection",
-    Dependencies.`projection-scaladsl`
+    Dependencies.`projection-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `projection-javadsl` = (project in file("projection/javadsl"))
@@ -840,7 +872,8 @@ lazy val `projection-javadsl` = (project in file("projection/javadsl"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-projection",
-    Dependencies.`projection-javadsl`
+    Dependencies.`projection-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `persistence-core` = (project in file("persistence/core"))
@@ -849,7 +882,8 @@ lazy val `persistence-core` = (project in file("persistence/core"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-persistence-core",
-    Dependencies.`persistence-core`
+    Dependencies.`persistence-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `persistence-testkit` = (project in file("persistence/testkit"))
@@ -857,13 +891,15 @@ lazy val `persistence-testkit` = (project in file("persistence/testkit"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-persistence-testkit",
-    Dependencies.`persistence-testkit`
+    Dependencies.`persistence-testkit`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `persistence-javadsl` = (project in file("persistence/javadsl"))
   .settings(
     name := "lagom-javadsl-persistence",
-    Dependencies.`persistence-javadsl`
+    Dependencies.`persistence-javadsl`,
+      dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `persistence-core` % "compile;test->test",
@@ -871,7 +907,7 @@ lazy val `persistence-javadsl` = (project in file("persistence/javadsl"))
     jackson,
     `cluster-core` % "compile;multi-jvm->multi-jvm",
     `cluster-javadsl`,
-    `projection-javadsl`
+    `projection-javadsl`,
   )
   .settings(runtimeLibCommon, mimaSettings, Protobuf.settings)
   .enablePlugins(RuntimeLibPlugins)
@@ -880,7 +916,8 @@ lazy val `persistence-javadsl` = (project in file("persistence/javadsl"))
 lazy val `persistence-scaladsl` = (project in file("persistence/scaladsl"))
   .settings(
     name := "lagom-scaladsl-persistence",
-    Dependencies.`persistence-scaladsl`
+    Dependencies.`persistence-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `persistence-core` % "compile;test->test",
@@ -900,13 +937,15 @@ lazy val `persistence-cassandra-core` = (project in file("persistence-cassandra/
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-persistence-cassandra-core",
-    Dependencies.`persistence-cassandra-core`
+    Dependencies.`persistence-cassandra-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 lazy val `persistence-cassandra-javadsl` = (project in file("persistence-cassandra/javadsl"))
   .settings(
     name := "lagom-javadsl-persistence-cassandra",
-    Dependencies.`persistence-cassandra-javadsl`
+    Dependencies.`persistence-cassandra-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `persistence-core`           % "compile;test->test",
@@ -921,7 +960,8 @@ lazy val `persistence-cassandra-javadsl` = (project in file("persistence-cassand
 lazy val `persistence-cassandra-scaladsl` = (project in file("persistence-cassandra/scaladsl"))
   .settings(
     name := "lagom-scaladsl-persistence-cassandra",
-    Dependencies.`persistence-cassandra-scaladsl`
+    Dependencies.`persistence-cassandra-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `persistence-core`           % "compile;test->test",
@@ -941,14 +981,16 @@ lazy val `persistence-jdbc-core` = (project in file("persistence-jdbc/core"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-persistence-jdbc-core",
-    Dependencies.`persistence-jdbc-core`
+    Dependencies.`persistence-jdbc-core`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .configure(multiJvm)
 
 lazy val `persistence-jdbc-javadsl` = (project in file("persistence-jdbc/javadsl"))
   .settings(
     name := "lagom-javadsl-persistence-jdbc",
-    Dependencies.`persistence-jdbc-javadsl`
+    Dependencies.`persistence-jdbc-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `persistence-jdbc-core` % "compile;test->test",
@@ -962,7 +1004,8 @@ lazy val `persistence-jdbc-javadsl` = (project in file("persistence-jdbc/javadsl
 lazy val `persistence-jdbc-scaladsl` = (project in file("persistence-jdbc/scaladsl"))
   .settings(
     name := "lagom-scaladsl-persistence-jdbc",
-    Dependencies.`persistence-jdbc-scaladsl`
+    Dependencies.`persistence-jdbc-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(
     `persistence-jdbc-core` % "compile;test->test",
@@ -979,6 +1022,7 @@ lazy val `persistence-jpa-javadsl` = (project in file("persistence-jpa/javadsl")
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-persistence-jpa",
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0"),
     Dependencies.`persistence-jpa-javadsl`,
     Dependencies.allowedDependencies ++= Dependencies.JpaTestWhitelist
   )
@@ -987,7 +1031,8 @@ lazy val `broker-javadsl` = (project in file("service/javadsl/broker"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-javadsl-broker",
-    Dependencies.`broker-javadsl`
+    Dependencies.`broker-javadsl`,
+      dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .settings(runtimeLibCommon, mimaSettings)
   .dependsOn(`api-javadsl`, `persistence-javadsl`)
@@ -996,7 +1041,8 @@ lazy val `broker-scaladsl` = (project in file("service/scaladsl/broker"))
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-scaladsl-broker",
-    Dependencies.`broker-scaladsl`
+    Dependencies.`broker-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .settings(runtimeLibCommon, mimaSettings)
   .dependsOn(`api-scaladsl`, `persistence-scaladsl`)
@@ -1006,7 +1052,8 @@ lazy val `kafka-client` = (project in file("service/core/kafka/client"))
   .settings(runtimeLibCommon, mimaSettings, forkedTests)
   .settings(
     name := "lagom-kafka-client",
-    Dependencies.`kafka-client`
+    Dependencies.`kafka-client`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(`api`)
 
@@ -1015,7 +1062,8 @@ lazy val `kafka-client-javadsl` = (project in file("service/javadsl/kafka/client
   .settings(runtimeLibCommon, mimaSettings)
   .settings(
     name := "lagom-javadsl-kafka-client",
-    Dependencies.`kafka-client-javadsl`
+    Dependencies.`kafka-client-javadsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .dependsOn(`api-javadsl`, `kafka-client`)
 
@@ -1023,7 +1071,8 @@ lazy val `kafka-client-scaladsl` = (project in file("service/scaladsl/kafka/clie
   .enablePlugins(RuntimeLibPlugins)
   .settings(
     name := "lagom-scaladsl-kafka-client",
-    Dependencies.`kafka-client-scaladsl`
+    Dependencies.`kafka-client-scaladsl`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
   .settings(runtimeLibCommon, mimaSettings)
   .dependsOn(`api-scaladsl`, `kafka-client`)
@@ -1052,7 +1101,6 @@ lazy val `kafka-broker-javadsl` = (project in file("service/javadsl/kafka/server
     `kafka-client-javadsl`,
     `server-javadsl`,
     logback             % Test,
-    `server-containers` % Test,
   )
 
 lazy val `kafka-broker-scaladsl` = (project in file("service/scaladsl/kafka/server"))
@@ -1069,7 +1117,6 @@ lazy val `kafka-broker-scaladsl` = (project in file("service/scaladsl/kafka/serv
     `kafka-client-scaladsl`,
     `server-scaladsl`,
     logback             % Test,
-    `server-containers` % Test,
   )
 
 lazy val logback = (project in file("logback"))
@@ -1095,7 +1142,6 @@ lazy val devEnvironmentProjects = Seq[ProjectReference](
   `build-tool-support`,
   `sbt-build-tool-support`,
   `sbt-plugin`,
-  `maven-plugin`,
   `dev-mode-ssl-support`,
   `service-locator`,
   `service-registration-javadsl`,
@@ -1141,13 +1187,23 @@ lazy val `server-containers` = (project in file("dev") / "server-containers")
     common,
     mimaSettings,
     runtimeScalaSettings,
+    scalaVersion := Dependencies.Versions.Scala212,
+    // compile options
+    (Compile / scalacOptions) ++= Seq(
+      "-encoding",
+      "UTF-8",
+      "-feature",
+      "-unchecked",
+      "-Xlog-reflective-calls",
+      "-deprecation"
+    ),
     name := "lagom-server-containers",
     resolvers += Resolver.sbtPluginRepo("releases"), // weird sbt-pgp/lagom docs/vegemite issue
     Dependencies.`server-containers`,
     publishMavenStyle := true,
     sonatypeSettings,
     // must support both 2.10 for sbt 0.13 and 2.13 for 2.13 tests
-    crossScalaVersions := (Dependencies.Versions.Scala ++ Dependencies.Versions.SbtScala).distinct,
+    crossScalaVersions := (Dependencies.Versions.SbtScala ++ Dependencies.Versions.Scala).distinct,
   )
 
 def withLagomVersion(p: Project): Project =
@@ -1168,6 +1224,7 @@ def sharedBuildToolSupportSetup(p: Project): Project =
     .enablePlugins(HeaderPlugin, Sonatype)
     .settings(sonatypeSettings, common, mimaSettings)
     .settings(
+      scalaVersion := Dependencies.Versions.Scala212,
       name := s"lagom-${thisProject.value.id}",
       Dependencies.`build-tool-support`,
     )
@@ -1177,8 +1234,8 @@ lazy val `build-tool-support` = (project in file("dev") / "build-tool-support")
   .configure(sharedBuildToolSupportSetup)
   .settings(
     publishMavenStyle := true,
-    crossScalaVersions := Seq(Dependencies.Versions.Scala.head),
-    scalaVersion := Dependencies.Versions.Scala.head,
+    crossScalaVersions := Seq(Dependencies.Versions.Scala212),
+    scalaVersion := Dependencies.Versions.Scala212,
     crossPaths := false,
   )
 
@@ -1190,11 +1247,13 @@ lazy val `build-tool-support` = (project in file("dev") / "build-tool-support")
 lazy val `sbt-build-tool-support` = (project in file("dev") / "build-tool-support")
   .configure(sharedBuildToolSupportSetup)
   .settings(
-    crossScalaVersions := Dependencies.Versions.SbtScala,
-    scalaVersion := Dependencies.Versions.SbtScala.head,
-    (pluginCrossBuild / sbtVersion) := Dependencies.Versions.TargetSbt1,
+    scalaBinaryVersion := "2.12",
+    scalaBinaryVersion in ThisBuild := "2.12",
+    scalaVersion := Dependencies.Versions.Scala212,
     sbtPlugin := true,
+    conflictWarning := ConflictWarning.disable,
     scriptedDependencies := (()),
+    dependencyOverrides ++= Seq("org.scala-lang.modules" % "scala-xml_2.12" % Versions.ScalaXml),
     target := target.value / "lagom-sbt-build-tool-support",
   )
 
@@ -1203,8 +1262,10 @@ lazy val `sbt-plugin` = (project in file("dev") / "sbt-plugin")
   .enablePlugins(HeaderPlugin, Sonatype, SbtPlugin)
   .settings(
     name := "lagom-sbt-plugin",
-    crossScalaVersions := Dependencies.Versions.SbtScala,
-    scalaVersion := Dependencies.Versions.SbtScala.head,
+    scalaBinaryVersion := "2.12",
+    scalaVersion := Dependencies.Versions.Scala212,
+    scalaBinaryVersion in ThisBuild := "2.13",
+    conflictWarning := ConflictWarning.disable,
     (pluginCrossBuild / sbtVersion) := Dependencies.Versions.TargetSbt1,
     Dependencies.`sbt-plugin`,
     libraryDependencies ++= Seq(
@@ -1212,7 +1273,7 @@ lazy val `sbt-plugin` = (project in file("dev") / "sbt-plugin")
         .sbtPluginExtra(
           "com.typesafe.play" % "sbt-plugin" % Dependencies.Versions.Play,
           CrossVersion.binarySbtVersion((pluginCrossBuild / sbtVersion).value),
-          CrossVersion.binaryScalaVersion(scalaVersion.value)
+          CrossVersion.binaryScalaVersion(Dependencies.Versions.Scala212)
         )
         .exclude("org.slf4j", "slf4j-simple")
     ),
@@ -1292,41 +1353,41 @@ lazy val `sbt-plugin` = (project in file("dev") / "sbt-plugin")
   )
   .dependsOn(`sbt-build-tool-support`)
 
-lazy val `maven-plugin` = (project in file("dev") / "maven-plugin")
-  .enablePlugins(lagom.SbtMavenPlugin, HeaderPlugin, Sonatype, Unidoc)
-  .settings(sonatypeSettings, common, mimaSettings, publishMavenStyleSettings)
-  .settings(
-    name := "Lagom Maven Plugin",
-    description := "Provides Lagom development environment support to maven.",
-    Dependencies.`maven-plugin`,
-    mavenClasspath := (`maven-launcher` / Compile / externalDependencyClasspath).value.map(_.data),
-    // This ensure that files in maven-test are also included
-    (Compile / headerSources) ++= (sourceDirectory.value / "maven-test" ** ("*.scala" || "*.java")).get,
-    mavenTestArgs := Seq(
-      "-Xmx768m",
-      "-XX:MaxMetaspaceSize=384m",
-      "-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2", // avoid TLS 1.3 => issues w/ jdk 11
-      s"-Dlagom.version=${version.value}",
-      s"-DarchetypeVersion=${version.value}",
-      "-Dorg.slf4j.simpleLogger.showLogName=false",
-      "-Dorg.slf4j.simpleLogger.showThreadName=false"
-    ),
-    pomExtra ~= (existingPomExtra => {
-      existingPomExtra ++
-        <prerequisites>
-          <maven>{CrossVersion.partialVersion(Dependencies.Versions.Maven).get.productIterator.mkString(".")}</maven>
-        </prerequisites>
-    })
-  )
-  .dependsOn(`build-tool-support`)
-
-lazy val `maven-launcher` = (project in file("dev") / "maven-launcher")
-  .settings(
-    sbtScalaSettings,
-    name := "lagom-maven-launcher",
-    description := "Dummy project, exists only to resolve the maven launcher classpath",
-    Dependencies.`maven-launcher`
-  )
+//lazy val `maven-plugin` = (project in file("dev") / "maven-plugin")
+//  .enablePlugins(lagom.SbtMavenPlugin, HeaderPlugin, Sonatype, Unidoc)
+//  .settings(sonatypeSettings, common, mimaSettings, publishMavenStyleSettings)
+//  .settings(
+//    name := "Lagom Maven Plugin",
+//    description := "Provides Lagom development environment support to maven.",
+//    Dependencies.`maven-plugin`,
+//    mavenClasspath := (`maven-launcher` / Compile / externalDependencyClasspath).value.map(_.data),
+//    // This ensure that files in maven-test are also included
+//    (Compile / headerSources) ++= (sourceDirectory.value / "maven-test" ** ("*.scala" || "*.java")).get,
+//    mavenTestArgs := Seq(
+//      "-Xmx768m",
+//      "-XX:MaxMetaspaceSize=384m",
+//      "-Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2", // avoid TLS 1.3 => issues w/ jdk 11
+//      s"-Dlagom.version=${version.value}",
+//      s"-DarchetypeVersion=${version.value}",
+//      "-Dorg.slf4j.simpleLogger.showLogName=false",
+//      "-Dorg.slf4j.simpleLogger.showThreadName=false"
+//    ),
+//    pomExtra ~= (existingPomExtra => {
+//      existingPomExtra ++
+//        <prerequisites>
+//          <maven>{CrossVersion.partialVersion(Dependencies.Versions.Maven).get.productIterator.mkString(".")}</maven>
+//        </prerequisites>
+//    })
+//  )
+//  .dependsOn(`build-tool-support`)
+//
+//lazy val `maven-launcher` = (project in file("dev") / "maven-launcher")
+//  .settings(
+//    sbtScalaSettings,
+//    name := "lagom-maven-launcher",
+//    description := "Dummy project, exists only to resolve the maven launcher classpath",
+//    Dependencies.`maven-launcher`
+//  )
 
 def scriptedSettings: Seq[Setting[_]] =
   Seq(scriptedLaunchOpts += s"-Dproject.version=${version.value}") ++
@@ -1476,6 +1537,7 @@ lazy val `sbt-scripted-tools` = (project in file("dev") / "sbt-scripted-tools")
   .settings(
     name := "lagom-sbt-scripted-tools",
     sbtPlugin := true,
+    conflictWarning := ConflictWarning.disable,
     scriptedDependencies := (()),
     crossScalaVersions := Dependencies.Versions.SbtScala,
     scalaVersion := Dependencies.Versions.SbtScala.head,
@@ -1592,7 +1654,8 @@ lazy val `kafka-server` = (project in file("dev") / "kafka-server")
   .settings(
     name := "lagom-kafka-server",
     crossScalaVersions -= Dependencies.Versions.Scala213, // No Kafka for Scala 2.13, use Kafka for Scala 2.12
-    Dependencies.`kafka-server`
+    Dependencies.`kafka-server`,
+    dependencyOverrides ++= Seq("org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0")
   )
 
 // kafka-server is used to run Kafka in dev mode and in the kafka broker tests, in its own process
@@ -1620,3 +1683,6 @@ lazy val `macro-testkit` = (project in file("macro-testkit"))
     PgpKeys.publishSigned := {},
     publish / skip := true
   )
+
+ThisBuild / version ~= (x => "1.7.0-SNAPSHOT")
+ThisBuild / dynver  ~= (x => "1.7.0-SNAPSHOT")

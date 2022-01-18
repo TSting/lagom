@@ -50,7 +50,7 @@ class StartCassandraMojo @Inject() (
       mavenLoggerManager.getLoggerForComponent("com.datastax").setThreshold(Logger.LEVEL_DISABLED)
 
       val cp = facade.resolveArtifact(
-        new DefaultArtifact("com.lightbend.lagom", "lagom-cassandra-server_2.12", "jar", LagomVersion.current)
+        new DefaultArtifact("com.lightbend.lagom", "lagom-cassandra-server_2.13", "jar", LagomVersion.current)
       )
 
       val scalaClassLoader = scalaClassLoaderManager.extractScalaClassLoader(cp)
@@ -103,7 +103,7 @@ class StartKafkaMojo @Inject() (
     if (kafkaEnabled) {
       val dependency = {
         val artifact =
-          new DefaultArtifact("com.lightbend.lagom", "lagom-kafka-server_2.12", "jar", LagomVersion.current)
+          new DefaultArtifact("com.lightbend.lagom", "lagom-kafka-server_2.13", "jar", LagomVersion.current)
         new Dependency(artifact, "runtime")
       }
       val cp = facade.resolveArtifact(dependency.getArtifact)
@@ -190,7 +190,7 @@ class StartServiceLocatorMojo @Inject() (
   override def execute(): Unit = {
     if (serviceLocatorEnabled) {
       val cp = facade.resolveArtifact(
-        new DefaultArtifact("com.lightbend.lagom", "lagom-service-locator_2.12", "jar", LagomVersion.current)
+        new DefaultArtifact("com.lightbend.lagom", "lagom-service-locator_2.13", "jar", LagomVersion.current)
       )
 
       val scalaClassLoader = scalaClassLoaderManager.extractScalaClassLoader(cp)

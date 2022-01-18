@@ -49,7 +49,7 @@ object JavaVersion {
 
   def sourceAndTarget(fullJavaHome: File): Seq[String] =
     if (isJdk8) Seq.empty
-    else Seq("-source", "8", "-target", "8", "-bootclasspath", fullJavaHome + "/jre/lib/rt.jar")
+    else Seq("-source", "17", "-target", "17", "-bootclasspath", fullJavaHome + "/jre/lib/rt.jar")
 }
 
 object CrossJava {

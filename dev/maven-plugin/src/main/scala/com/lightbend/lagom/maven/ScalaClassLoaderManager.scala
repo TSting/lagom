@@ -27,9 +27,7 @@ class ScalaClassLoaderManager @Inject() (logger: MavenLoggerProxy) {
   private val ScalaLibs = Set(
     "org.scala-lang"         -> "scala-library",
     "org.scala-lang"         -> "scala-reflect",
-    "org.scala-lang.modules" -> "scala-xml",
     "org.scala-lang.modules" -> "scala-parser-combinators",
-    "org.scala-lang.modules" -> "scala-java8-compat"
   )
 
   private val ScalaVersionPattern                   = "_\\d+\\.\\d+.*$".r

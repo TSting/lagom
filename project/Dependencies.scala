@@ -12,36 +12,36 @@ object Dependencies {
   object Versions {
     // Version numbers
 
-    val Scala212 = "2.12.13"
-    val Scala213 = "2.13.5"
-    val Scala    = Seq(Scala212, Scala213)
+    val Scala212 = "2.12.15"
+    val Scala213 = "2.13.7"
+    val Scala    = Seq(Scala213)
     val SbtScala = Seq(Scala212)
 
     // This is not the sbt version used by Lagom build itself, but
     // instead the version used to build Lagom sbt plugin.
-    val TargetSbt1 = "1.3.13"
+    val TargetSbt1 = "1.6.0-M1"
 
     // If you update the version of Play, you probably need to update the other Play* variables.
-    val Play             = "2.8.8" // sync with docs/build.sbt
+    val Play             = "2.9.0-SNAPSHOT" // sync with docs/build.sbt
     val PlayJson         = "2.9.2"
     val PlayStandaloneWs = "2.1.3"
     val Twirl            = "1.5.1" // sync with docs/project/plugins.sbt
     val PlayFileWatch    = "1.1.16"
 
-    val Akka: String = sys.props.getOrElse("lagom.build.akka.version", "2.6.14") // sync with docs/build.sbt
-    val AkkaHttp     = "10.1.14"
+    val Akka: String = sys.props.getOrElse("lagom.build.akka.version", "2.6.17") // sync with docs/build.sbt
+    val AkkaHttp     = "10.2.7"
 
     val AkkaPersistenceCassandra = "0.106"
     // this is the version used in AkkaPersistenceCassandra, we stick with it
     val CassandraDriver     = "3.7.2"
-    val AkkaPersistenceJdbc = "3.5.3"
-    val AkkaManagement      = "1.0.9"
+    val AkkaPersistenceJdbc = "5.0.4"
+    val AkkaManagement      = "1.1.1"
 
     val Disruptor = "3.4.2"
 
     // Also be sure to update ScalaTestVersion in docs/build.sbt.
     val ScalaTest            = "3.1.4"
-    val Jackson              = "2.11.4"
+    val Jackson              = "2.13.0"
     val JacksonCore          = Jackson
     val JacksonDatatype      = Jackson
     val JacksonDatabind      = Jackson
@@ -54,14 +54,14 @@ object Dependencies {
     // adapt links in (java/scala)/KafkaClient.md for minor version changes
     val AlpakkaKafka = "2.0.4"
     // Keep this version consistent with Alpakka Kafka Connector
-    val Kafka = "2.4.1"
+    val Kafka = "2.7.0"
 
     val Curator       = "2.12.0"
     val Immutables    = "2.8.8"
     val HibernateCore = "5.4.30.Final"
     val PCollections  = "3.1.4"
 
-    val ScalaJava8Compat = "0.9.1"
+    val ScalaJava8Compat = "1.0.0"
     val ScalaXml         = "1.3.0"
     val Slick            = "3.3.2"
     // JUnit[Interface] should be sync with:
@@ -143,7 +143,7 @@ object Dependencies {
   private val akkaDiscovery = "com.typesafe.akka" %% "akka-discovery" % Versions.Akka
 
   private val akkaPersistenceJdbc =
-    ("com.github.dnvriend" %% "akka-persistence-jdbc" % Versions.AkkaPersistenceJdbc).excludeAll(excludeSlf4j: _*)
+    ("com.lightbend.akka" %% "akka-persistence-jdbc" % Versions.AkkaPersistenceJdbc).excludeAll(excludeSlf4j: _*)
 
   // latest version of APC depend on a Cassandra driver core that's not compatible with Lagom (newer netty/guava/etc... under the covers)
   private val akkaPersistenceCassandra         = "com.typesafe.akka" %% "akka-persistence-cassandra"          % Versions.AkkaPersistenceCassandra

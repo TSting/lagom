@@ -26,6 +26,7 @@ dependencyOverrides ++= Seq(
   "com.typesafe.akka" %% "akka-testkit"                % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-stream-testkit"         % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-actor-testkit-typed"    % akkaVersion % Test,
+  "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.0",
   // Use "sbt-dependency-graph" or any other dependency report generator to
   // make sure you add all the necessary dependencies on this list
 )

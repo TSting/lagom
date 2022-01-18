@@ -2,3 +2,5 @@
 -Xss2M
 -XX:MaxInlineLevel=18
 -Dhttps.protocols=TLSv1,TLSv1.1,TLSv1.2
+--add-exports=java.base/sun.security.x509=ALL-UNNAMED
+--add-opens=java.base/sun.security.ssl=ALL-UNNAMED

@@ -6,16 +6,15 @@ package com.lightbend.lagom.internal.persistence.jdbc
 
 import java.sql.Connection
 import java.util.concurrent.TimeUnit
-
 import akka.Done
 import akka.actor.ActorSystem
 import akka.actor.CoordinatedShutdown
-import akka.persistence.jdbc.config.JournalTableConfiguration
-import akka.persistence.jdbc.config.SnapshotTableConfiguration
-import akka.persistence.jdbc.journal.dao.JournalTables
+import akka.persistence.jdbc.config.{LegacyJournalTableConfiguration, LegacySnapshotTableConfiguration, SnapshotTableConfiguration}
+import akka.persistence.jdbc.journal.dao.{JournalTables, legacy}
 import akka.persistence.jdbc.snapshot.dao.SnapshotTables
 import akka.util.Timeout
 import com.lightbend.lagom.internal.persistence.cluster.ClusterStartupTask
+
 import javax.naming.InitialContext
 import org.slf4j.LoggerFactory
 import slick.basic.DatabaseConfig
@@ -80,16 +79,16 @@ private[lagom] class SlickProvider(system: ActorSystem, coordinatedShutdown: Coo
   // This feature is somewhat limited, it assumes that the read side database is the same database as the journals and
   // snapshots
   private val createTablesTask: Option[ClusterStartupTask] = if (autoCreateTables) {
-    val journalCfg  = new JournalTableConfiguration(system.settings.config.getConfig("jdbc-read-journal"))
-    val snapshotCfg = new SnapshotTableConfiguration(system.settings.config.getConfig("jdbc-snapshot-store"))
+    val journalCfg  = new LegacyJournalTableConfiguration(system.settings.config.getConfig("jdbc-read-journal"))
+    val snapshotCfg = new LegacySnapshotTableConfiguration(system.settings.config.getConfig("jdbc-snapshot-store"))
 
-    val journalTables = new JournalTables {
-      override val journalTableCfg: JournalTableConfiguration = journalCfg
+    val journalTables = new akka.persistence.jdbc.journal.dao.legacy.JournalTables {
+      override val journalTableCfg: LegacyJournalTableConfiguration = journalCfg
       override val profile: JdbcProfile                       = SlickProvider.this.profile
     }
 
-    val snapshotTables = new SnapshotTables {
-      override val snapshotTableCfg: SnapshotTableConfiguration = snapshotCfg
+    val snapshotTables = new akka.persistence.jdbc.snapshot.dao.legacy.SnapshotTables {
+      override val snapshotTableCfg: LegacySnapshotTableConfiguration = snapshotCfg
       override val profile: JdbcProfile                         = SlickProvider.this.profile
     }
 

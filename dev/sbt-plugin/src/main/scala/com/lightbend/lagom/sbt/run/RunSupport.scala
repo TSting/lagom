@@ -10,25 +10,28 @@ import com.lightbend.lagom.devmode.Reloader.CompileResult
 import com.lightbend.lagom.devmode.Reloader.CompileSuccess
 import com.lightbend.lagom.devmode.Reloader.Source
 import com.lightbend.lagom.sbt.Internal
-import com.lightbend.lagom.sbt.LagomPlugin.autoImport._
-import com.lightbend.lagom.sbt.LagomReloadableService.autoImport._
-import sbt._
-import sbt.Keys._
+import com.lightbend.lagom.sbt.LagomPlugin.autoImport.*
+import com.lightbend.lagom.sbt.LagomReloadableService.autoImport.*
+import sbt.*
+import sbt.Keys.*
 import sbt.internal.Output
-import xsbti.Position
-import xsbti.Problem
-import java.util.Optional
+import xsbti.{FileConverter, Position, Problem}
 
+import java.util.Optional
 import play.api.PlayException
 import play.sbt.PlayExceptions.CompilationException
 import play.sbt.PlayExceptions.UnexpectedException
+import play.twirl.compiler.MaybeGeneratedSource
+import sbt.internal.inc.PlainVirtualFileConverter
 
+import java.net.URI
+import java.nio.file.Paths
 import scala.util.control.NonFatal
 
 private[sbt] object RunSupport {
   def reloadRunTask(
-      extraConfigs: Map[String, String]
-  ): Def.Initialize[Task[Reloader.DevServer]] = Def.task {
+                     extraConfigs: Map[String, String]
+                   ): Def.Initialize[Task[Reloader.DevServer]] = Def.task {
     val state = Keys.state.value
     val scope = resolvedScoped.value.scope
 
@@ -58,8 +61,8 @@ private[sbt] object RunSupport {
   }
 
   def nonReloadRunTask(
-      extraConfigs: Map[String, String]
-  ): Def.Initialize[Task[Reloader.DevServer]] = Def.task {
+                        extraConfigs: Map[String, String]
+                      ): Def.Initialize[Task[Reloader.DevServer]] = Def.task {
     val classpath = (devModeDependencies.value ++ (fullClasspath in Runtime).value).distinct
 
     val buildLinkSettings = extraConfigs.toSeq ++ lagomDevSettings.value
@@ -82,11 +85,11 @@ private[sbt] object RunSupport {
    * This task must be removed together with the deprecated lagomServicePort.
    */
   private def selectHttpPortToUse = Def.task {
-    val logger                = Keys.sLog.value
+    val logger = Keys.sLog.value
     val deprecatedServicePort = lagomServicePort.value
-    val serviceHttpPort       = lagomServiceHttpPort.value
-    val generatedHttpPort     = lagomGeneratedServiceHttpPortCache.value
-    val isUsingGeneratedPort  = serviceHttpPort == generatedHttpPort
+    val serviceHttpPort = lagomServiceHttpPort.value
+    val generatedHttpPort = lagomGeneratedServiceHttpPortCache.value
+    val isUsingGeneratedPort = serviceHttpPort == generatedHttpPort
 
     // deprecated setting was modified by user.
     if (deprecatedServicePort != -1 && isUsingGeneratedPort) {
@@ -130,10 +133,10 @@ private[sbt] object RunSupport {
   }
 
   def compile(
-      reloadCompile: () => Result[sbt.internal.inc.Analysis],
-      classpath: () => Result[Classpath],
-      streams: () => Option[Streams]
-  ): CompileResult = {
+               reloadCompile: () => Result[sbt.internal.inc.Analysis],
+               classpath: () => Result[Classpath],
+               streams: () => Option[Streams]
+             ): CompileResult = {
     reloadCompile().toEither.left
       .map(compileFailure(streams()))
       .right
@@ -149,17 +152,61 @@ private[sbt] object RunSupport {
       .fold(identity, identity)
   }
 
-  def sourceMap(analysis: sbt.internal.inc.Analysis): Map[String, Source] = {
-    analysis.relations.classes.reverseMap
-      .mapValues { files =>
-        val file = files.head // This is typically a set containing a single file, so we can use head here.
-        Source(file, originalSource(file))
+  object JFile {
+    class FileOption(val anyOpt: Option[Any]) extends AnyVal {
+      def isEmpty: Boolean = !anyOpt.exists(_.isInstanceOf[java.io.File])
+
+      def get: java.io.File = anyOpt.get.asInstanceOf[java.io.File]
+    }
+
+    def unapply(any: Option[Any]): FileOption = new FileOption(any)
+  }
+
+  object VirtualFile {
+    def unapply(value: Option[Any]): Option[Any] =
+      value.filter { vf =>
+        val name = vf.getClass.getSimpleName
+        (name == "BasicVirtualFileRef" || name == "MappedVirtualFile")
       }
+  }
+
+  def sourceMap(analysis: sbt.internal.inc.Analysis): Map[String, Source] = {
+    analysis.relations.classes.reverseMap.flatMap {
+      case (name, files) =>
+        files.headOption match { // This is typically a set containing a single file, so we can use head here.
+          case None => Map.empty[String, Source]
+
+          case JFile(file) => // sbt < 1.4
+            Map(name -> Source(file, MaybeGeneratedSource.unapply(file).flatMap(_.source)))
+
+          case VirtualFile(vf) => // sbt 1.4+ virtual file, see #10486
+            val names = vf.getClass.getMethod("names").invoke(vf).asInstanceOf[Array[String]]
+            val path =
+              if (names.head.startsWith("${")) { // check for ${BASE} or similar (in case it changes)
+                // It's an relative path, skip the first element (which usually is "${BASE}")
+                Paths.get(names.drop(1).head, names.drop(2): _*)
+              } else {
+                // It's an absolute path, sbt uses them e.g. for subprojects located outside of the base project
+                val id = vf.getClass.getMethod("id").invoke(vf).asInstanceOf[String]
+                // In Windows the sbt virtual file id does not start with a slash, but absolute paths in Java URIs need that
+                val extraSlash = if (id.startsWith("/")) "" else "/"
+                val prefix = "file://" + extraSlash
+                // The URI will be like file:///home/user/project/SomeClass.scala (Linux/Mac) or file:///C:/Users/user/project/SomeClass.scala (Windows)
+                Paths.get(URI.create(s"$prefix$id"));
+              }
+            Map(name -> Source(path.toFile, MaybeGeneratedSource.unapply(path.toFile).flatMap(_.source)))
+
+          case anyOther =>
+            throw new RuntimeException(
+              s"Can't handle class ${anyOther.getClass.getName} used for sourceMap"
+            )
+        }
+    }
   }
 
   def getScopedKey(incomplete: Incomplete): Option[ScopedKey[_]] = incomplete.node.flatMap {
     case key: ScopedKey[_] => Option(key)
-    case task: Task[_]     => task.info.attributes.get(taskDefinitionKey)
+    case task: Task[_] => task.info.attributes.get(taskDefinitionKey)
   }
 
   def allProblems(inc: Incomplete): Seq[Problem] = {
@@ -173,20 +220,20 @@ private[sbt] object RunSupport {
   def problems(es: Seq[Throwable]): Seq[Problem] = {
     es.flatMap {
       case cf: xsbti.CompileFailed => cf.problems
-      case _                       => Nil
+      case _ => Nil
     }
   }
 
   def getProblems(incomplete: Incomplete, streams: Option[Streams]): Seq[Problem] = {
     allProblems(incomplete) ++ {
       Incomplete.linearize(incomplete).flatMap(getScopedKey).flatMap { scopedKey =>
-        val JavacError         = """\[error\]\s*(.*[.]java):(\d+):\s*(.*)""".r
-        val JavacErrorInfo     = """\[error\]\s*([a-z ]+):(.*)""".r
+        val JavacError = """\[error\]\s*(.*[.]java):(\d+):\s*(.*)""".r
+        val JavacErrorInfo = """\[error\]\s*([a-z ]+):(.*)""".r
         val JavacErrorPosition = """\[error\](\s*)\^\s*""".r
 
         streams
           .map { streamsManager =>
-            var first: (Option[(String, String, String)], Option[Int])  = (None, None)
+            var first: (Option[(String, String, String)], Option[Int]) = (None, None)
             var parsed: (Option[(String, String, String)], Option[Int]) = (None, None)
             Output
               .lastLines(scopedKey, streamsManager, None)
@@ -216,19 +263,28 @@ private[sbt] object RunSupport {
             case (Some(error), maybePosition) =>
               new Problem {
                 def message: String = error._3
-                def category        = ""
+
+                def category = ""
+
                 def position: Position = new Position {
-                  def line: Optional[Integer]   = Optional.ofNullable(error._2.toInt)
-                  def lineContent: String       = ""
+                  def line: Optional[Integer] = Optional.ofNullable(error._2.toInt)
+
+                  def lineContent: String = ""
+
                   def offset: Optional[Integer] = Optional.empty[java.lang.Integer]
+
                   def pointer: Optional[Integer] =
                     maybePosition
                       .map(pos => Optional.ofNullable((pos - 1).asInstanceOf[java.lang.Integer]))
                       .getOrElse(Optional.empty[java.lang.Integer])
+
                   def pointerSpace: Optional[String] = Optional.empty[String]
-                  def sourceFile: Optional[File]     = Optional.ofNullable(file(error._1))
-                  def sourcePath: Optional[String]   = Optional.ofNullable(error._1)
+
+                  def sourceFile: Optional[File] = Optional.ofNullable(file(error._1))
+
+                  def sourcePath: Optional[String] = Optional.ofNullable(error._1)
                 }
+
                 def severity = xsbti.Severity.Error
               }
           }

@@ -23,7 +23,7 @@ object VersionSyncCheckPlugin extends AutoPlugin {
   final case class Entry(name: String, expectedVersion: String, valName: String)
 
   val entries = Seq(
-    Entry("Scala", Dependencies.Versions.Scala212, "ScalaVersion"),
+    Entry("Scala", Dependencies.Versions.Scala213, "ScalaVersion"),
     Entry("Play", Dependencies.Versions.Play, "PlayVersion"),
     Entry("Akka", Dependencies.Versions.Akka, "AkkaVersion"),
     Entry("ScalaTest", Dependencies.Versions.ScalaTest, "ScalaTestVersion"),
