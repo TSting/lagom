@@ -4,10 +4,10 @@
 
 package com.lightbend.lagom.scaladsl.api.deser
 
+import com.lightbend.lagom.scaladsl.api.deser.macros.com.lightbend.lagom.scaladsl.api.deser.macros.SerializerMacros
+
 import scala.language.higherKinds
-
 import java.util.UUID
-
 import scala.collection.compat._
 import scala.collection.immutable
 import scala.collection.immutable.Seq
@@ -38,6 +38,7 @@ trait PathParamSerializer[Param] {
 object PathParamSerializer extends DefaultPathParamSerializers
 
 trait DefaultPathParamSerializers extends LowPriorityPathParamSerializers {
+  import scala.language.experimental.macros
 
   /**
    * Create a PathParamSerializer for required parameters.
@@ -82,6 +83,9 @@ trait DefaultPathParamSerializers extends LowPriorityPathParamSerializers {
    * A UUID path parameter serializer
    */
   implicit val UuidPathParamSerializer: PathParamSerializer[UUID] = required("UUID")(UUID.fromString)(_.toString)
+
+  implicit def AnyValPathParamSerializer[T <: AnyVal]: PathParamSerializer[T] =
+    macro SerializerMacros.anyValSerializer[T]
 
   /**
    * An option path param serializer

@@ -10,7 +10,7 @@ import com.lightbend.lagom.internal.api.Path
 import com.lightbend.lagom.internal.scaladsl.api.ScaladslPath
 import com.lightbend.lagom.internal.scaladsl.client.ScaladslServiceApiBridge
 import com.lightbend.lagom.internal.server.ServiceRouter
-import com.lightbend.lagom.scaladsl.api.Descriptor
+import com.lightbend.lagom.scaladsl.api.{Descriptor, Service}
 import com.lightbend.lagom.scaladsl.api.Descriptor.RestCallId
 import com.lightbend.lagom.scaladsl.api.ServiceSupport.ScalaMethodServiceCall
 import com.lightbend.lagom.scaladsl.api.transport._
@@ -24,10 +24,11 @@ import play.api.mvc.PlayBodyParsers
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 
-class ScaladslServiceRouter(
+class ScaladslServiceRouter[T <: Service: ClassTag](
     protected override val descriptor: Descriptor,
-    service: Any,
+    service: T,
     httpConfiguration: HttpConfiguration,
     parsers: PlayBodyParsers
 )(implicit ec: ExecutionContext, mat: Materializer)

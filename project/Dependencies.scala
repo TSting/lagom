@@ -19,17 +19,17 @@ object Dependencies {
 
     // This is not the sbt version used by Lagom build itself, but
     // instead the version used to build Lagom sbt plugin.
-    val TargetSbt1 = "1.6.0-M1"
+    val TargetSbt1 = "1.7.1"
 
     // If you update the version of Play, you probably need to update the other Play* variables.
-    val Play             = "2.9.0-SNAPSHOT" // sync with docs/build.sbt
+    val Play             = "2.9.1-SNAPSHOT" // sync with docs/build.sbt
     val PlayJson         = "2.9.2"
     val PlayStandaloneWs = "2.1.3"
     val Twirl            = "1.5.1" // sync with docs/project/plugins.sbt
     val PlayFileWatch    = "1.1.16"
 
-    val Akka: String = sys.props.getOrElse("lagom.build.akka.version", "2.6.17") // sync with docs/build.sbt
-    val AkkaHttp     = "10.2.7"
+    val Akka: String = sys.props.getOrElse("lagom.build.akka.version", "2.6.20") // sync with docs/build.sbt
+    val AkkaHttp     = "10.2.10"
 
     val AkkaPersistenceCassandra = "0.106"
     // this is the version used in AkkaPersistenceCassandra, we stick with it

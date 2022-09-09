@@ -141,7 +141,7 @@ def publishMavenStyleSettings: Seq[Setting[_]] = Seq(
 )
 
 def sonatypeSettings: Seq[Setting[_]] = Seq(
-  publishTo := Some(Resolver.file("file", new File("/Users/gideondk/Development/kriskras-mvn-repo"))),
+  publishTo := Some(Resolver.file("file", new File("~/Development/sting-mvn-repo"))),
 )
 
 def runtimeScalaSettings: Seq[Setting[_]] = Seq(
@@ -258,6 +258,9 @@ val mimaSettings: Seq[Setting[_]] = {
     }.toSet,
     mimaBinaryIssueFilters ++= Seq(
       // Drop sbt 0.13
+      ProblemFilters
+        .exclude[DirectMissingMethodProblem]("*lagom.*dsl.api.ServiceSupport#ScalaMethodServiceCall.invoke"),
+      ProblemFilters.exclude[DirectMissingMethodProblem]("*lagom.*dsl.server.LagomServerBuilder.buildRouter"),
       ProblemFilters.exclude[MissingClassProblem]("sbt.LagomLoad"),
       ProblemFilters.exclude[MissingClassProblem]("sbt.LagomLoad$"),
       ProblemFilters.exclude[MissingClassProblem]("com.lightbend.lagom.sbt.LagomPluginCompat"),
