@@ -12,8 +12,8 @@ object Dependencies {
   object Versions {
     // Version numbers
 
-    val Scala212 = "2.12.15"
-    val Scala213 = "2.13.7"
+    val Scala212 = "2.12.17"
+    val Scala213 = "2.13.9"
     val Scala    = Seq(Scala213)
     val SbtScala = Seq(Scala212)
 
@@ -40,7 +40,7 @@ object Dependencies {
     val Disruptor = "3.4.2"
 
     // Also be sure to update ScalaTestVersion in docs/build.sbt.
-    val ScalaTest            = "3.1.4"
+    val ScalaTest            = "3.2.14"
     val Jackson              = "2.13.0"
     val JacksonCore          = Jackson
     val JacksonDatatype      = Jackson
@@ -49,8 +49,8 @@ object Dependencies {
     val Maven                = "3.6.3"
     val MavenWagon           = "3.3.3"
     val MavenResolver        = "1.4.1"
-    val Netty                = "4.1.63.Final"
-    val NettyReactiveStreams = "2.0.5"
+    val Netty                = "4.1.81.Final"
+    val NettyReactiveStreams = "2.0.6"
     // adapt links in (java/scala)/KafkaClient.md for minor version changes
     val AlpakkaKafka = "2.0.4"
     // Keep this version consistent with Alpakka Kafka Connector
@@ -62,7 +62,7 @@ object Dependencies {
     val PCollections  = "3.1.4"
 
     val ScalaJava8Compat = "1.0.0"
-    val ScalaXml         = "1.3.0"
+    val ScalaXml         = "2.1.0"
     val Slick            = "3.3.2"
     // JUnit[Interface] should be sync with:
     //   lagomJUnitDeps in dev/sbt-plugin/src/main/scala/com/lightbend/lagom/sbt/LagomImport.scala

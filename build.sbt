@@ -13,9 +13,9 @@ import sbt.Keys.dependencyOverrides
 // Turn off "Resolving" log messages that clutter build logs
 (ThisBuild / ivyLoggingLevel) := UpdateLogging.Quiet
 
-resolvers += "kriskras-public-repo" at "https://raw.github.com/Kris-Kras/public-dependencies/master"
+resolvers += "sting-public-repo" at "https://raw.github.com/TSting/public-dependencies/master"
 
-(ThisBuild / resolvers) += "kriskras-public-repo" at "https://raw.github.com/Kris-Kras/public-dependencies/master"
+(ThisBuild / resolvers) += "sting-public-repo" at "https://raw.github.com/TSting/public-dependencies/master"
 
 def evictionSettings: Seq[Setting[_]] = Seq(
   // This avoids a lot of dependency resolution warnings to be showed.
@@ -71,9 +71,14 @@ def common: Seq[Setting[_]] = releaseSettings ++ evictionSettings ++ Seq(
     "-encoding",
     "UTF-8",
     "-parameters",
+    "-source",
+    "17",
+    "-target",
+    "17",
+    "--enable-preview",
     "-Xlint:unchecked",
     "-Xlint:deprecation"
-  ) ++ akka.JavaVersion.sourceAndTarget(new File("/opt/homebrew/Cellar/openjdk/17.0.1/libexec/openjdk.jdk/Contents/Home")),
+  ) ++ akka.JavaVersion.sourceAndTarget(new File("/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home")),
   LagomPublish.validatePublishSettingsSetting
 )
 
@@ -141,7 +146,7 @@ def publishMavenStyleSettings: Seq[Setting[_]] = Seq(
 )
 
 def sonatypeSettings: Seq[Setting[_]] = Seq(
-  publishTo := Some(Resolver.file("file", new File("~/Development/sting-mvn-repo"))),
+  publishTo := Some(Resolver.file("file", new File(System.getProperty("user.home") + "/Development/sting-mvn-repo"))),
 )
 
 def runtimeScalaSettings: Seq[Setting[_]] = Seq(
@@ -1687,5 +1692,5 @@ lazy val `macro-testkit` = (project in file("macro-testkit"))
     publish / skip := true
   )
 
-ThisBuild / version ~= (x => "1.7.0-SNAPSHOT")
-ThisBuild / dynver  ~= (x => "1.7.0-SNAPSHOT")
+ThisBuild / version ~= (x => "1.7.1-SNAPSHOT")
+ThisBuild / dynver  ~= (x => "1.7.1-SNAPSHOT")
